@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>정가네 · 배당/커버드콜 ETF 시뮬레이터</title>
+<style>
+  @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
+  @import url('https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@700;800&display=swap');
+
+  :root{
+    --bg:#f5f0e6; --paper:#fffdf8; --ink:#211d18; --sub:#8a8175;
+    --line:#e7ddcc; --seal:#b23b2c; --gold:#b88a2a; --green:#2f6b4f;
+    --red:#c0392b; --blue:#3a6ea5; --purple:#7a5ea8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);
+    font-family:'Pretendard',-apple-system,sans-serif;padding-bottom:48px}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:16px;
+    box-shadow:0 1px 2px rgba(33,29,24,.04)}
+  input{font-family:inherit}
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+
+  /* 헤더 */
+  header{background:var(--paper);border-bottom:1px solid var(--line);
+    padding:18px 28px;display:flex;justify-content:space-between;
+    align-items:center;flex-wrap:wrap;gap:12px}
+  .logo{display:flex;align-items:center;gap:12px}
+  .logo .name{font-weight:800;font-size:25px;letter-spacing:-1px;color:var(--ink)}
+  .logo .en{font-size:11.5px;color:var(--sub);letter-spacing:.2px;margin-top:3px;font-weight:500}
+  .logo .tag{font-size:11px;color:var(--green);font-weight:700;margin-top:3px;letter-spacing:-.2px}
+  .head-r{font-size:12.5px;color:var(--sub);text-align:right;line-height:1.6}
+  .head-r b{color:var(--seal);font-weight:600}
+
+  .wrap{max-width:1040px;margin:0 auto;padding:24px 20px 0;
+    display:flex;flex-direction:column;gap:26px}
+  .col-cell{min-width:0}
+  .zone-head{display:flex;align-items:center;gap:8px;margin:0 4px 12px;font-weight:800;font-size:15px;color:var(--ink)}
+  .zone-head .num{width:23px;height:23px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0}
+  .zone-head .num.seal{background:var(--seal)}
+  .zone-head .num.green{background:var(--green)}
+  .zone-head .num.blue3{background:#2f6fd0}
+  .zone-head .desc{font-size:11.5px;font-weight:500;color:var(--sub);margin-left:auto}
+  .col-input{background:#ece1ca;border:1.5px solid #d2c19c;border-top:4px solid var(--seal);
+    border-radius:16px;padding:16px;box-shadow:0 4px 16px rgba(33,29,24,.08);
+    display:flex;flex-direction:column;gap:14px}
+  .col-input.cond-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));align-items:start}
+  .cond-grid .span-all{grid-column:1/-1}
+
+  .label{font-size:12px;font-weight:700;margin-bottom:8px}
+  .pad{padding:18px}
+  .row{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{padding:7px 12px;border-radius:9px;cursor:pointer;font-size:12.5px;
+    font-weight:600;border:1px solid var(--line);background:#fff;color:var(--ink);transition:.15s}
+  .chip.on{border-color:var(--seal);background:var(--seal);color:#fff}
+  #insurance-chips{flex-wrap:nowrap;gap:6px}
+  #insurance-chips .chip{flex:1;text-align:center;padding:7px 4px;white-space:nowrap}
+  #principal-chips{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+  #principal-chips .chip{padding:7px 2px;font-size:10.5px;text-align:center;white-space:nowrap}
+  .note{font-size:11.5px;color:var(--sub);margin-top:6px;line-height:1.5}
+  .inp{width:100%;padding:9px 11px;border-radius:9px;border:1px solid var(--line);
+    font-size:14px;font-weight:600;color:var(--ink);outline:none;background:#fff}
+
+  .etf-pick{display:flex;flex-direction:column;gap:8px}
+  .etf-pick .item{display:flex;align-items:center;gap:8px}
+  .cbox{width:20px;height:20px;border-radius:6px;flex-shrink:0;cursor:pointer;
+    border:1.5px solid var(--line);background:#fff;color:#fff;font-size:12px;
+    display:flex;align-items:center;justify-content:center}
+  .cbox.on{border-color:var(--seal);background:var(--seal)}
+  .etf-pick .tk{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .etf-pick .nm{font-size:10.5px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mk{font-size:10px;font-weight:700;margin-left:6px}
+  .mk.mk-h{color:#2563b8} .mk.mk-gh{color:#2f7d3a} .mk.mk-g{color:#a87a09}
+  .pick-head{display:flex;justify-content:space-between;font-size:10.5px;color:var(--sub);font-weight:600;margin-bottom:8px;padding:0 2px}
+  .cat-legend{display:flex;gap:18px;padding:12px 6px 6px;font-size:11.5px;color:var(--sub);font-weight:500;min-height:18px}
+  .cat-legend .lg-slot{flex:1;min-width:0}
+  .cat-legend .lg-item{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+  .cat-legend .lg-item i{width:11px;height:11px;border-radius:3px;display:inline-block;flex-shrink:0}
+  .chart-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:4px}
+  .dropdown{position:relative;flex-shrink:0}
+  .dd-toggle{display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:13px;font-weight:700;color:var(--ink);cursor:pointer;font-family:inherit}
+  .dd-cap{font-size:11px;font-weight:600;color:var(--sub)}
+  .dd-caret{font-size:10px;color:var(--sub);transition:transform .15s}
+  .dropdown.open .dd-caret{transform:rotate(180deg)}
+  .dd-menu{position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1px solid var(--line);border-radius:11px;box-shadow:0 8px 24px rgba(33,29,24,.14);padding:6px;display:none;z-index:30;min-width:140px}
+  .dropdown.open .dd-menu{display:block}
+  .dd-item{padding:9px 12px;border-radius:8px;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;white-space:nowrap}
+  .dd-item:hover{background:#f3eee3}
+  .dd-item.on{background:var(--seal);color:#fff}
+  .sz{font-size:11px;font-weight:700;color:var(--sub);white-space:nowrap;flex-shrink:0;text-align:right;margin-left:6px}
+  .risk-pill{font-size:9.5px;font-weight:700;padding:1px 7px;border-radius:999px;white-space:nowrap}
+  .risk-pill.rk-high{background:#fdecea;color:#c0392b}
+  .risk-pill.rk-mid{background:#fbf0df;color:#c2791a}
+  .risk-pill.rk-low{background:#e9f4ed;color:#2f8a4f}
+
+  .right{display:flex;flex-direction:column;gap:16px;
+    background:#e8eee6;border:1.5px solid #cfdcca;border-top:4px solid var(--green);
+    border-radius:16px;padding:16px;box-shadow:0 4px 16px rgba(33,29,24,.08)}
+  .stitle{font-family:'Nanum Myeongjo',serif;font-weight:800;font-size:18px}
+
+  /* 차트 */
+  .chart{display:flex;align-items:flex-end;gap:18px;height:230px;padding:10px 6px 0;
+    border-bottom:1px solid var(--line)}
+  .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+  .bar-val{font-size:12px;font-weight:800;margin-bottom:6px;text-align:center;line-height:1.2}
+  .bar-yld{display:block;font-size:10.5px;font-weight:600;color:var(--sub);margin-top:1px}
+  .bar{width:64px;max-width:70%;border-radius:6px 6px 0 0;transition:height .4s ease}
+  .bar-x{font-size:11.5px;font-weight:600;margin-top:8px;text-align:center;line-height:1.3;word-break:keep-all;max-width:100%}
+  .bar-risk{margin-top:5px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;white-space:nowrap}
+  .bar-risk.rk-high{background:#fdecea;color:#c0392b}
+  .bar-risk.rk-mid{background:#fbf0df;color:#c2791a}
+  .bar-risk.rk-low{background:#e9f4ed;color:#2f8a4f}
+
+  /* ETF 카드 */
+  .etf-head{display:flex;justify-content:space-between;align-items:center;
+    padding:16px 20px;border-bottom:1px solid var(--line)}
+  .etf-head .t{font-weight:700;font-size:15px}
+  .etf-head .sub{font-size:12px;color:var(--sub)}
+  .rate-inp{width:78px;text-align:right;padding:6px 8px;font-size:15px;font-weight:700;
+    border-radius:9px;border:1px solid var(--line);outline:none;background:#fff}
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr)}
+  @media(max-width:560px){.metrics{grid-template-columns:repeat(2,1fr)}}
+  .metric{padding:16px}
+  .metric+.metric{border-left:1px solid var(--line)}
+  .metric .ml{font-size:11.5px;color:var(--sub);margin-bottom:6px}
+  .metric .mv{font-size:17px;font-weight:800;line-height:1.25;word-break:keep-all}
+  .metric .ms{font-size:11px;color:var(--sub);margin-top:5px}
+
+  .taxbar{padding:14px 20px 18px;border-top:1px solid var(--line)}
+  .taxbar .seg{display:flex;height:22px;border-radius:6px;overflow:hidden;gap:1px}
+  .taxbar .seg div{min-width:2px}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px}
+  .legend .lg{display:flex;align-items:center;gap:6px;font-size:11.5px}
+  .legend .dot{width:9px;height:9px;border-radius:2px}
+
+  .warn{background:#fdf6e3;border-top:1px solid var(--line);padding:12px 20px;
+    font-size:12px;line-height:1.7;color:#7a5c1a}
+  .disclaimer{font-size:11px;color:var(--sub);line-height:1.7;padding:4px 4px 0}
+  .empty{padding:40px;text-align:center;color:var(--sub)}
+
+  /* 막대 클릭/선택 */
+  .bar-col{cursor:pointer}
+  .bar{position:relative;transition:filter .12s,box-shadow .12s}
+  .bar-col:hover .bar{filter:brightness(1.06)}
+  .bar.sel{box-shadow:0 0 0 3px rgba(33,29,24,.18);filter:brightness(1.06)}
+  .detail-hint{font-size:12px;color:var(--sub);text-align:center;padding:2px 0}
+
+  /* ③ 개인 시나리오 */
+  .scenario-panel{background:#e8eef6;border:1.5px solid #cdd9ea;border-top:4px solid #2f6fd0;
+    border-radius:16px;padding:16px;box-shadow:0 4px 16px rgba(33,29,24,.08)}
+  .scn-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .scn-row select{flex:1;min-width:0;padding:9px 10px;border-radius:9px;border:1px solid var(--line);
+    background:#fff;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink)}
+  .scn-row .scn-amt{width:140px;padding:9px 10px;border-radius:9px;border:1px solid var(--line);
+    font-family:inherit;font-size:13px;font-weight:600;text-align:right;background:#fff;color:var(--ink)}
+  .scn-row .scn-del{width:32px;height:36px;border:1px solid var(--line);background:#fff;border-radius:9px;
+    cursor:pointer;color:var(--sub);font-size:16px;flex-shrink:0}
+  .scn-row .scn-del:hover{background:#fbecea;color:var(--red);border-color:#f0c9c4}
+  .btn-add{margin-top:4px;padding:9px 14px;border-radius:9px;border:1px dashed #9fb4d4;background:#fff;
+    color:#2f6fd0;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit}
+  .btn-add:hover{background:#f0f5fc}
+  .scn-sum{background:#fffdf8;border:1px solid var(--line);border-radius:14px;margin-top:16px;overflow:hidden}
+  .scn-sum-grid{display:grid;grid-template-columns:repeat(4,1fr)}
+  @media(max-width:560px){.scn-sum-grid{grid-template-columns:repeat(2,1fr)}}
+  .scn-metric{padding:16px}
+  .scn-metric+.scn-metric{border-left:1px solid var(--line)}
+  .scn-metric .ml{font-size:11.5px;color:var(--sub);margin-bottom:6px}
+  .scn-metric .mv{font-size:18px;font-weight:800;line-height:1.25;word-break:keep-all}
+  .scn-metric .ms{font-size:11px;color:var(--sub);margin-top:5px}
+  .scn-break{padding:12px 16px;border-top:1px solid var(--line);font-size:12px;color:var(--sub);line-height:1.7}
+  .scn-break b{color:var(--ink)}
+  /* ===== 모바일 반응형 ===== */
+  @media(max-width:640px){
+    header{padding:13px 15px}
+    .logo{gap:9px}
+    .logo svg{width:34px;height:34px}
+    .logo .name{font-size:20px}
+    .logo .en{font-size:10.5px}
+    .logo .tag{font-size:10px}
+    .head-r{font-size:10.5px;text-align:left;flex-basis:100%}
+
+    .wrap{padding:16px 12px 0;gap:20px}
+    .col-input,.scenario-panel{padding:13px}
+    .col-input.cond-grid{gap:12px}
+    .pad{padding:14px}
+    .zone-head{font-size:14px;margin:0 2px 10px}
+    .disclaimer{font-size:10.5px}
+
+    /* 차트: 막대가 많아 가로 스크롤로 가독성 유지(좌우로 밀어 보기) */
+    .chart{gap:10px;height:208px;overflow-x:auto;overflow-y:hidden;
+      -webkit-overflow-scrolling:touch;padding:10px 2px 6px}
+    .bar-col{min-width:56px;flex:0 0 auto}
+    .bar{width:38px;max-width:38px}
+    .bar-val{font-size:10.5px;margin-bottom:5px}
+    .bar-yld{font-size:9.5px}
+    .bar-x{font-size:10px;margin-top:6px}
+    .bar-risk{font-size:9px;padding:1px 6px;margin-top:4px}
+    .chart-head{flex-wrap:wrap}
+    .cat-legend{gap:8px}
+
+    /* 상세 카드 */
+    .etf-head{padding:13px 15px}
+    .etf-head .t{font-size:13.5px}
+    .rate-inp{width:70px;font-size:14px}
+    .metric{padding:13px}
+    .metric .mv{font-size:15px}
+    .taxbar,.warn{padding-left:15px;padding-right:15px}
+
+    /* 시나리오 입력 줄: 종목 한 줄 + 금액·삭제 한 줄 */
+    .scn-row{flex-wrap:wrap}
+    .scn-row select{flex:1 1 100%}
+    .scn-row .scn-amt{flex:1 1 auto;width:auto}
+    .scn-metric{padding:13px}
+    .scn-metric .mv{font-size:16px}
+  }
+  @media(max-width:380px){
+    .logo .name{font-size:18px}
+    .bar-col{min-width:52px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <svg width="44" height="44" viewBox="0 0 44 44">
+      <defs>
+        <linearGradient id="jgGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#34795a"/>
+          <stop offset="1" stop-color="#1d4a36"/>
+        </linearGradient>
+      </defs>
+      <rect x="2" y="2" width="40" height="40" rx="13" fill="url(#jgGrad)"/>
+      <rect x="2.6" y="2.6" width="38.8" height="38.8" rx="12.6" fill="none" stroke="#ffffff" stroke-width="0.8" opacity="0.12"/>
+      <polyline points="11,29.5 18,24 24,26.5 32,14.5" fill="none" stroke="#ecca85" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="32" cy="14.5" r="3.1" fill="#ecca85"/>
+    </svg>
+    <div>
+      <div class="name">정가네</div>
+      <div class="en">정씨 가족이 운영하는 펀드</div>
+      <div class="tag">부모님이 주신 2억으로 안전한 노후자금 만들기</div>
+    </div>
+  </div>
+  <div class="head-r">
+    배당 · 커버드콜 ETF 현금흐름 시뮬레이터<br/>
+    <b id="head-principal">원금 2억원 기준</b>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ① 조건 선택 -->
+  <div class="col-cell">
+   <div class="zone-head"><span class="num seal">1</span>조건 선택<span class="desc">여기서 설정하세요</span></div>
+   <div class="col-input cond-grid">
+    <div class="card pad">
+      <div class="label">투자 원금 (KRW)</div>
+      <div class="row" id="principal-chips" style="margin-bottom:10px"></div>
+      <input class="inp" id="principal-input" type="text" />
+      <div class="note" id="principal-kor"></div>
+    </div>
+
+    <div class="card pad">
+      <div class="label">건강보험 가입 유형</div>
+      <div class="row" id="insurance-chips"></div>
+      <div class="note">배우자 등에 피부양 중이면 ‘피부양자’(기본). 단 연 2,000만원 초과 시 자격 박탈.</div>
+    </div>
+
+    <div class="card pad">
+      <div class="label">차감 항목 선택</div>
+      <div class="etf-pick" id="deduct-toggles"></div>
+      <div class="note">실수령에서 뺄 항목. 원천세는 기본 선택, 종소세·건보료는 기본 미선택.</div>
+    </div>
+
+    <div class="card pad">
+      <div class="label">배당 외 다른 종합소득 (연)</div>
+      <input class="inp" id="other-input" type="text" value="0" />
+      <div class="note">근로·사업·연금 등. 종합과세 누진 구간 계산에 합산됩니다.</div>
+    </div>
+
+    <div class="card pad span-all">
+      <div class="label">비교할 ETF 선택</div>
+      <div class="pick-head"><span>종목 · 기초자산</span><span>순자산 · 위험도</span></div>
+      <div class="etf-pick" id="etf-pick"></div>
+    </div>
+   </div>
+  </div>
+
+  <!-- ② 예상 분배금 -->
+  <div class="col-cell">
+   <div class="zone-head"><span class="num green">2</span>예상 분배금<span class="desc">막대를 클릭하면 상세</span></div>
+   <div class="right">
+    <div class="card" style="padding:20px 20px 8px">
+      <div class="chart-head">
+        <div class="stitle">예상 월 실수령 비교</div>
+        <div class="dropdown" id="rate-dd">
+          <button class="dd-toggle" id="rate-dd-btn"><span class="dd-cap">분배율 기준</span><span id="rate-dd-label">2025년</span><span class="dd-caret">▾</span></button>
+          <div class="dd-menu" id="rate-dd-menu"></div>
+        </div>
+      </div>
+      <div class="note" style="margin-bottom:6px" id="chart-sub">세후(원천세 차감 후) 월 평균 분배금</div>
+      <div class="note" style="margin-bottom:14px;font-size:11px">막대 위 <b style="color:var(--ink)">연 %</b> = 세전 연 분배율(투자원금 대비 1년치 분배금 비율). 금액은 차감 후 월 실수령입니다. 연도별 분배율은 참고용 추정치이며(상장 전 연도 포함) 각 카드에서 직접 수정할 수 있습니다.</div>
+      <div class="chart" id="chart"></div>
+      <div class="cat-legend" id="cat-legend"></div>
+      <div class="note" style="padding:2px 6px 8px;font-size:11px">※ 위험도(저·중·고)는 분배율과 커버드콜 전략 강도를 기준으로 한 단순 상대 분류입니다. 분배율이 높을수록 기준가 하락(원금 손실) 위험이 커지는 경향이 있습니다.</div>
+    </div>
+
+    <div class="detail-hint">👆 막대를 클릭하면 해당 종목의 상세(분배금·세금·실수령)가 아래에 나옵니다.</div>
+    <div id="detail-cards"></div>
+   </div>
+  </div>
+
+  <!-- ③ 개인 시나리오 구성 -->
+  <div class="col-cell">
+   <div class="zone-head"><span class="num blue3">3</span>개인 시나리오 구성<span class="desc">종목을 섞어 보세요</span></div>
+   <div class="scenario-panel">
+    <div class="note" style="margin-bottom:12px">여러 종목에 각각 얼마씩 투자할지 정하면, 합산한 <b>월 평균 분배금</b>과 <b>연 수익금</b>이 계산됩니다. (세금·건보료는 위 ‘조건 선택’과 분배율 기준 연도를 그대로 적용)</div>
+    <div id="scenario-rows"></div>
+    <button class="btn-add" id="scenario-add">+ 종목 추가</button>
+    <div id="scenario-summary"></div>
+   </div>
+  </div>
+
+  <div class="disclaimer">
+    ※ 본 시뮬레이터는 참고용 추정 도구입니다. 분배율은 매월 변동하므로 직접 수정해 사용하세요.
+    종합소득세는 기본·인적공제, 배당가산(gross-up), 외국납부세액공제 등을 단순화한 추정치이며,
+    건강보험료는 약 8% 단일율로 가정했습니다. 실제 세금·건보료는 개인 상황에 따라 달라지며,
+    정확한 내용은 세무사·전문가 상담을 권합니다. 본 자료는 투자 권유나 금융 자문이 아닙니다.
+  </div>
+</div>
+
+<script>
+/* ============ 데이터 ============ */
+var PRESETS = [
+  {id:"jepq",name:"JP Morgan 나스닥 EPI",short:"JEPQ",ticker:"JEPQ",cat:"해외",rate:11.0,aum:524400,aumLabel:"$38B·약52조"},
+  {id:"jepi",name:"JP Morgan 에쿼티 PI",short:"JEPI",ticker:"JEPI",cat:"해외",rate:7.5,aum:536820,aumLabel:"$39B·약54조"},
+  {id:"schd",name:"Schwab 미국배당주",short:"SCHD",ticker:"SCHD",cat:"해외",rate:3.6,aum:1145400,aumLabel:"$83B·약115조"},
+  {id:"tnq",name:"TIGER 미국나스닥100커버드콜(합성)",short:"TIGER 나스닥커버드콜",ticker:"441680",cat:"국내해외",rate:13.0,aum:3885,aumLabel:"3,885억"},
+  {id:"kw",name:"KODEX 200타겟위클리커버드콜",short:"KODEX 위클리커버드콜",ticker:"498400",cat:"국내",rate:15.0,aum:44051,aumLabel:"4.4조"},
+  {id:"tdow",name:"TIGER 미국배당다우존스",short:"TIGER 미국배당다우",ticker:"458730",cat:"국내해외",rate:3.5,aum:24811,aumLabel:"2.5조"},
+  {id:"kcc",name:"KODEX 미국배당커버드콜액티브",short:"KODEX 배당커버드콜",ticker:"441640",cat:"국내해외",rate:9.0,aum:10195,aumLabel:"1.0조"},
+  {id:"reit",name:"TIGER 리츠부동산인프라",short:"TIGER 리츠인프라",ticker:"329200",cat:"국내",rate:7.0,aum:14761,aumLabel:"1.5조"}
+];
+// 카테고리: 해외=미국 직접, 국내해외=국내상장 해외자산 ETF, 국내=국내자산 ETF
+var CAT_LABEL={"해외":"미국","국내해외":"국내(미국)","국내":"한국"};
+var CAT_ORDER={"해외":0,"국내해외":1,"국내":2};
+// 카테고리(해외→국내해외→국내)로 묶고, 각 그룹 안에서 순자산 큰 순으로 정렬
+PRESETS.sort(function(a,b){
+  if(a.cat!==b.cat) return CAT_ORDER[a.cat]-CAT_ORDER[b.cat];
+  return b.aum-a.aum;
+});
+var PRINCIPAL_PRESETS=[{l:"5천만원",v:5e7},{l:"1억",v:1e8},{l:"1억 5천만원",v:1.5e8},{l:"2억",v:2e8},{l:"3억",v:3e8},{l:"5억",v:5e8},{l:"10억",v:1e9}];
+// 해외=파랑, 국내(해외)=초록(파랑+노랑 혼합), 국내=노랑
+var CAT_COLORS={
+  "해외":["#1f5388","#2f6fd0","#5e9bd6"],
+  "국내해외":["#2f7d3a","#4aa34f","#74c06f"],
+  "국내":["#d6a417","#edc233","#f5d65e"]
+};
+(function(){
+  var cnt={"해외":0,"국내해외":0,"국내":0};
+  PRESETS.forEach(function(p){
+    var arr=CAT_COLORS[p.cat]; p.color=arr[cnt[p.cat]%arr.length]; cnt[p.cat]++;
+  });
+})();
+
+/* ============ 상태 ============ */
+// 분배율(연 %) 연도별 데이터 — 참고용 대표 추정치 (상장 전 연도는 추정/해당없음, 직접 수정 가능)
+var RATE_PERIODS=[{k:"y2025",l:"2025년"},{k:"y2024",l:"2024년"},{k:"y2023",l:"2023년"},{k:"y2022",l:"2022년"}];
+var RATE_PLABEL={y2025:"2025년",y2024:"2024년",y2023:"2023년",y2022:"2022년"};
+var RATE_DATA={
+  y2025:{jepq:11,   jepi:7.5, schd:3.7, tnq:13, kw:15, tdow:3.6, kcc:9.4, reit:7.1},
+  y2024:{jepq:9.6,  jepi:7.2, schd:3.5, tnq:12, kw:14, tdow:3.4, kcc:8,   reit:6.8},
+  y2023:{jepq:11.5, jepi:8.0, schd:3.6, tnq:13, kw:14, tdow:3.4, kcc:8.5, reit:7.5},
+  y2022:{jepq:12,   jepi:11,  schd:3.4, tnq:11, kw:14, tdow:3.5, kcc:7,   reit:6.5}
+};
+var state={
+  principal:2e8, insurance:"피부양자", other:0,
+  selected:["jepq","tnq","kw"],
+  ratePeriod:"y2025",
+  rates:{},
+  deductWH:true, deductTax:false, deductHealth:false,
+  expanded:[],
+  scenario:[{id:"jepq",amount:1e8},{id:"kw",amount:5e7},{id:"reit",amount:5e7}]
+};
+state.rates=Object.assign({}, RATE_DATA[state.ratePeriod]);
+
+/* ============ 포맷 ============ */
+function fmtKor(n){
+  var x=Math.round(n), neg=x<0, v=Math.abs(x);
+  var eok=Math.floor(v/1e8); v%=1e8;
+  var man=Math.floor(v/1e4); var won=v%1e4;
+  var out="";
+  if(eok) out+=eok.toLocaleString()+"억 ";
+  if(man) out+=man.toLocaleString()+"만 ";
+  if(won||(!eok&&!man)) out+=won.toLocaleString();
+  out=out.trim()+"원";
+  return (neg?"-":"")+out;
+}
+var fmtWon=function(n){return Math.round(n).toLocaleString()+"원";};
+
+/* ============ 세금 계산 ============ */
+var BRACKETS=[
+  {u:1.4e7,r:.06,d:0},{u:5e7,r:.15,d:1.26e6},{u:8.8e7,r:.24,d:5.76e6},
+  {u:1.5e8,r:.35,d:1.544e7},{u:3e8,r:.38,d:1.994e7},{u:5e8,r:.40,d:2.594e7},
+  {u:1e9,r:.42,d:3.594e7},{u:Infinity,r:.45,d:6.594e7}
+];
+function prog(b){if(b<=0)return 0;for(var i=0;i<BRACKETS.length;i++){if(b<=BRACKETS[i].u)return b*BRACKETS[i].r-BRACKETS[i].d;}return 0;}
+var THRESH=2e7, WH=.154, HR=.08;
+
+function calc(etf){
+  var p=state.principal, oth=state.other, ins=state.insurance;
+  var annualGross=p*(etf.rate/100), monthlyGross=annualGross/12;
+  var over=annualGross>THRESH;
+
+  // 원천세 (배당소득세 15.4% 원천징수) — 선택 시
+  var withholding=state.deductWH ? annualGross*WH : 0;
+
+  // 종합소득세 (연 2,000만원 초과 & 선택 시)
+  var extra=0;
+  if(state.deductTax && over){
+    var base=annualGross+oth;
+    var compNat=prog(base)-prog(oth);
+    var whNat=annualGross*.14;
+    extra=Math.max(0,compNat-whNat)*1.1;
+  }
+
+  // 건강보험료 (연 2,000만원 초과 & 선택 시, 가입유형별)
+  var health=0;
+  if(state.deductHealth && over){
+    if(ins==="직장") health=Math.max(0,annualGross-THRESH)*HR;
+    else health=annualGross*HR; // 지역, 또는 피부양자(2,000만원 초과로 자격 박탈→지역)
+  }
+
+  var totalTax=withholding+extra+health;
+  var netAnnual=annualGross-totalTax, netMonthly=netAnnual/12;
+  return {annualGross:annualGross,monthlyGross:monthlyGross,withholding:withholding,
+    cashMonthly:(annualGross-withholding)/12,extra:extra,health:health,totalTax:totalTax,
+    netAnnual:netAnnual,netMonthly:netMonthly,over:over,eff:totalTax/annualGross};
+}
+
+/* ============ 렌더 ============ */
+function el(tag,cls,html){var e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e;}
+function catBadge(cat){
+  var cls = cat==="해외"?"mk-h":(cat==="국내해외"?"mk-gh":"mk-g");
+  return '<span class="mk '+cls+'">'+CAT_LABEL[cat]+'</span>';
+}
+function riskOf(r){
+  if(r>=10) return {label:"고위험",cls:"rk-high"};
+  if(r>=5)  return {label:"중위험",cls:"rk-mid"};
+  return {label:"저위험",cls:"rk-low"};
+}
+var LEGEND_LABEL={"해외":"미국 주식","국내해외":"국내(미국주식)","국내":"한국 주식"};
+var LEGEND_COLOR={"해외":"#2f6fd0","국내해외":"#4aa34f","국내":"#e3ad1c"};
+function renderLegend(results){
+  var lg=document.getElementById("cat-legend"); lg.innerHTML="";
+  var seen={};
+  results.forEach(function(x){
+    var slot=el("div","lg-slot");
+    if(!seen[x.etf.cat]){
+      seen[x.etf.cat]=true;
+      slot.innerHTML='<span class="lg-item"><i style="background:'+LEGEND_COLOR[x.etf.cat]+'"></i>'+LEGEND_LABEL[x.etf.cat]+'</span>';
+    }
+    lg.appendChild(slot);
+  });
+}
+
+function renderControls(){
+  // 원금 칩
+  var pc=document.getElementById("principal-chips"); pc.innerHTML="";
+  PRINCIPAL_PRESETS.forEach(function(p){
+    var c=el("button","chip"+(state.principal===p.v?" on":""),p.l);
+    if(p.v===1.5e8) c.style.gridColumn="span 2";
+    c.onclick=function(){state.principal=p.v;renderAll();};
+    pc.appendChild(c);
+  });
+  document.getElementById("principal-input").value=state.principal.toLocaleString();
+  document.getElementById("principal-kor").textContent=fmtKor(state.principal);
+  document.getElementById("head-principal").textContent="원금 "+fmtKor(state.principal)+" 기준";
+
+  // 건보 칩
+  var ic=document.getElementById("insurance-chips"); ic.innerHTML="";
+  [["지역","지역"],["직장","직장"],["피부양자","피부양자"]].forEach(function(t){
+    var c=el("button","chip"+(state.insurance===t[0]?" on":""),t[1]);
+    c.onclick=function(){state.insurance=t[0];renderAll();};
+    ic.appendChild(c);
+  });
+
+  // 차감 항목 토글
+  var dt=document.getElementById("deduct-toggles"); dt.innerHTML="";
+  [
+    {key:"deductWH",label:"원천세 15.4%",note:"배당소득세·원천징수 (필수)"},
+    {key:"deductTax",label:"종합소득세",note:"연 분배금 2,000만원 초과 시"},
+    {key:"deductHealth",label:"건강보험료",note:"가입유형 기준 추정 (약 8%)"}
+  ].forEach(function(d){
+    var on=state[d.key];
+    var item=el("div","item");
+    var box=el("div","cbox"+(on?" on":""),on?"✓":"");
+    box.onclick=function(){state[d.key]=!state[d.key];renderAll();};
+    var info=el("div"); info.style.cssText="flex:1;min-width:0";
+    info.appendChild(el("div","tk",d.label));
+    info.appendChild(el("div","nm",d.note));
+    item.appendChild(box); item.appendChild(info); dt.appendChild(item);
+  });
+
+  // ETF 선택
+  var ep=document.getElementById("etf-pick"); ep.innerHTML="";
+  PRESETS.forEach(function(p){
+    var on=state.selected.indexOf(p.id)>-1;
+    var item=el("div","item");
+    var box=el("div","cbox"+(on?" on":""),on?"✓":"");
+    box.onclick=function(){
+      if(on) state.selected=state.selected.filter(function(x){return x!==p.id;});
+      else state.selected=state.selected.concat([p.id]);
+      renderAll();
+    };
+    var info=el("div"); info.style.cssText="flex:1;min-width:0";
+    info.appendChild(el("div","tk",p.short+catBadge(p.cat)));
+    info.appendChild(el("div","nm",p.name));
+    var rk=riskOf(Number(state.rates[p.id])||0);
+    var right=el("div"); right.style.cssText="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0";
+    right.appendChild(el("div","sz",p.aumLabel));
+    right.appendChild(el("span","risk-pill "+rk.cls,rk.label));
+    item.appendChild(box); item.appendChild(info); item.appendChild(right); ep.appendChild(item);
+  });
+
+  // 분배율 기준 연도 드롭다운
+  document.getElementById("rate-dd-label").textContent=RATE_PLABEL[state.ratePeriod];
+  var menu=document.getElementById("rate-dd-menu"); menu.innerHTML="";
+  RATE_PERIODS.forEach(function(t){
+    var it=el("div","dd-item"+(state.ratePeriod===t.k?" on":""),t.l);
+    it.onclick=function(e){
+      e.stopPropagation();
+      state.ratePeriod=t.k;
+      state.rates=Object.assign({}, RATE_DATA[t.k]);
+      document.getElementById("rate-dd").classList.remove("open");
+      renderAll();
+    };
+    menu.appendChild(it);
+  });
+  document.getElementById("rate-dd-btn").onclick=function(e){
+    e.stopPropagation();
+    document.getElementById("rate-dd").classList.toggle("open");
+  };
+}
+
+function selectedETFs(){
+  return PRESETS.filter(function(p){return state.selected.indexOf(p.id)>-1;})
+    .map(function(p){return {id:p.id,name:p.name,short:p.short,ticker:p.ticker,cat:p.cat,rate:state.rates[p.id],aumLabel:p.aumLabel,aum:p.aum,color:p.color};});
+}
+
+function renderChart(results){
+  var chart=document.getElementById("chart"); chart.innerHTML="";
+  if(!results.length){chart.innerHTML='<div class="empty" style="margin:auto">ETF를 선택하세요</div>';return;}
+  var max=Math.max.apply(null,results.map(function(x){return x.r.netMonthly;}),1);
+  results.forEach(function(x,i){
+    var col=el("div","bar-col");
+    var rt=Number(x.etf.rate)||0;
+    var rtStr=(rt%1===0)?String(rt):rt.toFixed(1);
+    var valBox=el("div","bar-val");
+    valBox.innerHTML='월 '+(x.r.netMonthly/1e4).toFixed(0)+'만원<span class="bar-yld">연 '+rtStr+'%</span>';
+    col.appendChild(valBox);
+    var bar=el("div","bar"+(state.expanded.indexOf(x.etf.id)>-1?" sel":""));
+    var h=Math.max(4,(x.r.netMonthly/max)*118);
+    bar.style.height=h+"px"; bar.style.background=x.etf.color;
+    bar.title=x.etf.name+" "+fmtWon(x.r.netMonthly)+" / 연 "+rtStr+"%";
+    col.appendChild(bar);
+    col.appendChild(el("div","bar-x",x.etf.short));
+    var rk=riskOf(rt);
+    col.appendChild(el("div","bar-risk "+rk.cls,rk.label));
+    col.onclick=function(){
+      var idx=state.expanded.indexOf(x.etf.id);
+      if(idx>-1) state.expanded.splice(idx,1); else state.expanded.push(x.etf.id);
+      renderResults();
+    };
+    chart.appendChild(col);
+  });
+}
+
+function renderCards(results){
+  var box=document.getElementById("detail-cards"); box.innerHTML="";
+  var shown=results.filter(function(x){return state.expanded.indexOf(x.etf.id)>-1;});
+  if(!shown.length) return; // 선택된 막대가 없으면 상세 카드 없음
+  shown.forEach(function(x,i){
+    var etf=x.etf,r=x.r,color=etf.color;
+    var card=el("div","card"); card.style.cssText="overflow:hidden;margin-bottom:18px";
+
+    var head=el("div","etf-head"); head.style.borderLeft="4px solid "+color;
+    var hl=el("div");
+    hl.appendChild(el("div","t",etf.name+catBadge(etf.cat)));
+    hl.appendChild(el("div","sub",etf.ticker+" · 순자산 "+etf.aumLabel));
+    var hr=el("div"); hr.style.textAlign="right";
+    hr.appendChild(el("div","label","연 분배율 (%)"));
+    var ri=el("input"); ri.type="number"; ri.step="0.1"; ri.className="rate-inp";
+    ri.value=etf.rate; ri.style.color=color;
+    ri.oninput=function(){state.rates[etf.id]=parseFloat(ri.value)||0;renderResults();};
+    hr.appendChild(ri);
+    head.appendChild(hl); head.appendChild(hr); card.appendChild(head);
+
+    var m=el("div","metrics");
+    m.appendChild(metric("공식 분배금 (월)",fmtKor(r.monthlyGross),"연 "+fmtKor(r.annualGross),"var(--ink)"));
+    m.appendChild(metric("계좌 실입금 (월)",fmtKor(r.cashMonthly),state.deductWH?"원천세 15.4% 차감":"원천세 미차감","var(--blue)"));
+    var extraSub = (r.extra+r.health>0) ? "추가 차감" : (r.over ? "대상·미차감" : "비대상");
+    m.appendChild(metric("종합세·건보료 (연)","-"+fmtKor(r.extra+r.health),extraSub,"var(--red)"));
+    m.appendChild(metric("실수령 (월)",fmtKor(r.netMonthly),"실효세율 "+(r.eff*100).toFixed(1)+"%","var(--green)"));
+    card.appendChild(m);
+
+    card.appendChild(taxBar(r));
+
+    if(r.over){
+      var w=el("div","warn");
+      var applied=state.deductTax||state.deductHealth;
+      var hmsg;
+      if(applied){
+        hmsg = state.deductHealth
+          ? (state.insurance==="직장"
+              ? " 직장가입자는 2,000만원 초과분에 소득월액보험료가 추가됩니다."
+              : state.insurance==="피부양자"
+                ? " 피부양자는 연 2,000만원 초과로 자격이 박탈되어 지역가입자 건보료가 부과됩니다."
+                : " 지역가입자 건강보험료가 소득 기준으로 부과되며, 피부양자라면 자격이 박탈됩니다.")
+          : " 현재 종합소득세만 반영 중입니다.";
+      } else {
+        hmsg = " 현재 종합소득세·건보료는 실수령에 미반영입니다. 좌측 ‘차감 항목 선택’에서 켤 수 있습니다.";
+      }
+      w.innerHTML="⚠️ 연 분배금이 <b>2,000만원</b>을 초과하여 금융소득 종합과세 대상입니다."+hmsg;
+      card.appendChild(w);
+    }
+    box.appendChild(card);
+  });
+}
+
+function metric(label,val,sub,color){
+  var d=el("div","metric");
+  d.appendChild(el("div","ml",label));
+  var v=el("div","mv",val); v.style.color=color; d.appendChild(v);
+  d.appendChild(el("div","ms",sub));
+  return d;
+}
+
+function taxBar(r){
+  var wrap=el("div","taxbar");
+  var total=r.annualGross||1;
+  var seg=[
+    {l:"원천세",v:r.withholding,c:"var(--gold)"},
+    {l:"종합세",v:r.extra,c:"var(--seal)"},
+    {l:"건보료",v:r.health,c:"var(--purple)"},
+    {l:"실수령",v:Math.max(0,r.netAnnual),c:"var(--green)"}
+  ];
+  var bar=el("div","seg");
+  seg.filter(function(s){return s.v>0;}).forEach(function(s){
+    var d=el("div"); d.style.width=(s.v/total*100)+"%"; d.style.background=s.c;
+    d.title=s.l+" "+fmtWon(s.v); bar.appendChild(d);
+  });
+  wrap.appendChild(bar);
+  var lg=el("div","legend");
+  seg.forEach(function(s){
+    var item=el("div","lg");
+    var dot=el("span","dot"); dot.style.background=s.c; item.appendChild(dot);
+    item.appendChild(el("span",null,'<span style="color:var(--sub)">'+s.l+'</span> '+
+      '<b>'+fmtKor(s.v)+'</b> <span style="color:var(--sub)">('+(s.v/total*100).toFixed(1)+'%)</span>'));
+    lg.appendChild(item);
+  });
+  wrap.appendChild(lg);
+  return wrap;
+}
+
+function renderResults(){
+  var results=selectedETFs().map(function(e){return {etf:e,r:calc(e)};});
+  // 차감 항목에 따라 부제 갱신
+  var applied=[];
+  if(state.deductWH) applied.push("원천세");
+  if(state.deductTax) applied.push("종합소득세");
+  if(state.deductHealth) applied.push("건보료");
+  var sub=document.getElementById("chart-sub");
+  sub.textContent = (applied.length
+    ? "세후("+applied.join("·")+" 차감 후) 월 평균 분배금"
+    : "세전 월 평균 분배금 (차감 없음)") + " · 분배율 기준: " + RATE_PLABEL[state.ratePeriod];
+  renderChart(results);
+  renderLegend(results);
+  renderCards(results);
+  renderScenarioSummary();
+}
+
+/* ============ ③ 개인 시나리오 ============ */
+function getPreset(id){ for(var i=0;i<PRESETS.length;i++){ if(PRESETS[i].id===id) return PRESETS[i]; } return PRESETS[0]; }
+
+function calcPortfolio(holds){
+  var totalInvested=0, totalGross=0;
+  holds.forEach(function(h){
+    var rate=Number(state.rates[h.id])||0;
+    totalInvested+=h.amount;
+    totalGross+=h.amount*(rate/100);
+  });
+  var over=totalGross>THRESH;
+  var withholding=state.deductWH?totalGross*WH:0;
+  var extra=0;
+  if(state.deductTax && over){
+    var base=totalGross+state.other;
+    extra=Math.max(0,(prog(base)-prog(state.other))-totalGross*0.14)*1.1;
+  }
+  var health=0;
+  if(state.deductHealth && over){
+    if(state.insurance==="직장") health=Math.max(0,totalGross-THRESH)*HR;
+    else health=totalGross*HR;
+  }
+  var totalTax=withholding+extra+health;
+  var netAnnual=totalGross-totalTax;
+  return {totalInvested:totalInvested,totalGross:totalGross,monthlyGross:totalGross/12,
+    withholding:withholding,extra:extra,health:health,totalTax:totalTax,
+    netAnnual:netAnnual,netMonthly:netAnnual/12,over:over,
+    blended:totalInvested?totalGross/totalInvested*100:0};
+}
+
+function renderScenarioRows(){
+  var box=document.getElementById("scenario-rows"); box.innerHTML="";
+  state.scenario.forEach(function(h,idx){
+    var row=el("div","scn-row");
+    var sel=document.createElement("select");
+    PRESETS.forEach(function(p){
+      var o=document.createElement("option"); o.value=p.id; o.textContent=p.short+" ("+CAT_LABEL[p.cat]+")";
+      if(p.id===h.id) o.selected=true; sel.appendChild(o);
+    });
+    sel.onchange=function(){ state.scenario[idx].id=sel.value; renderScenarioSummary(); };
+    var amt=document.createElement("input"); amt.type="text"; amt.className="scn-amt";
+    amt.value=h.amount.toLocaleString(); amt.placeholder="금액(원)";
+    amt.oninput=function(){
+      var n=Number(amt.value.replace(/[^0-9]/g,"")); state.scenario[idx].amount=isNaN(n)?0:n;
+      renderScenarioSummary();
+    };
+    var del=el("button","scn-del","×");
+    del.onclick=function(){ state.scenario.splice(idx,1); renderScenarioRows(); renderScenarioSummary(); };
+    row.appendChild(sel); row.appendChild(amt); row.appendChild(del);
+    box.appendChild(row);
+  });
+}
+
+function renderScenarioSummary(){
+  var box=document.getElementById("scenario-summary"); if(!box) return; box.innerHTML="";
+  var holds=state.scenario.filter(function(h){return h.amount>0;});
+  if(!holds.length){ box.innerHTML='<div class="note" style="padding:14px 2px">종목과 금액을 입력하면 합산 결과가 나옵니다.</div>'; return; }
+  var r=calcPortfolio(holds);
+  var sum=el("div","scn-sum");
+  var grid=el("div","scn-sum-grid");
+  grid.appendChild(scnMetric("총 투자금",fmtKor(r.totalInvested),holds.length+"개 종목","var(--ink)"));
+  grid.appendChild(scnMetric("월 평균 분배금",fmtKor(r.monthlyGross),"세전","var(--gold)"));
+  grid.appendChild(scnMetric("월 실수령",fmtKor(r.netMonthly),"세금 차감 후","var(--green)"));
+  grid.appendChild(scnMetric("연 수익금",fmtKor(r.netAnnual),"블렌디드 "+r.blended.toFixed(1)+"%","var(--blue)"));
+  sum.appendChild(grid);
+  // 종목별 비중
+  var parts=holds.map(function(h){
+    var p=getPreset(h.id); var pct=r.totalInvested?(h.amount/r.totalInvested*100):0;
+    return p.short+" "+fmtKor(h.amount)+"("+pct.toFixed(0)+"%)";
+  });
+  var brk=el("div","scn-break");
+  brk.innerHTML="구성: "+parts.join(" · ")+
+    (r.over?'<br><b style="color:var(--red)">⚠️ 합산 분배금이 연 2,000만원 초과 — 종합과세·건보료 대상</b>':"");
+  sum.appendChild(brk);
+  box.appendChild(sum);
+}
+function scnMetric(label,val,sub,color){
+  var d=el("div","scn-metric");
+  d.appendChild(el("div","ml",label));
+  var v=el("div","mv",val); v.style.color=color; d.appendChild(v);
+  d.appendChild(el("div","ms",sub));
+  return d;
+}
+function renderAll(){renderControls();renderResults();}
+
+/* 입력 이벤트 */
+document.getElementById("principal-input").addEventListener("input",function(e){
+  var n=Number(e.target.value.replace(/[^0-9]/g,""));
+  state.principal=isNaN(n)?0:n; renderResults();
+  document.getElementById("principal-kor").textContent=fmtKor(state.principal);
+  document.getElementById("head-principal").textContent="원금 "+fmtKor(state.principal)+" 기준";
+});
+document.getElementById("other-input").addEventListener("input",function(e){
+  var n=Number(e.target.value.replace(/[^0-9]/g,""));
+  state.other=isNaN(n)?0:n; renderResults();
+});
+
+document.getElementById("scenario-add").onclick=function(){
+  var used=state.scenario.map(function(h){return h.id;});
+  var next=PRESETS.filter(function(p){return used.indexOf(p.id)<0;})[0]||PRESETS[0];
+  state.scenario.push({id:next.id,amount:5e7});
+  renderScenarioRows(); renderScenarioSummary();
+};
+
+document.addEventListener("click",function(){
+  var d=document.getElementById("rate-dd"); if(d) d.classList.remove("open");
+});
+
+renderScenarioRows();
+renderAll();
+</script>
+</body>
+</html>
